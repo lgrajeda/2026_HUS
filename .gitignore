@@ -1,0 +1,22 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+config.yml
+
+# Ignore specific file extensions
+*.rds
+*.html
+*.xlsx
+*.csv
+*.docx
+*.png
+
+# Ignore specific folders
+input/
+
+
+# Ignore specific file
+MySQL_Login_Credentials.R
+
+# Exception: Upload the following file

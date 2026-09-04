@@ -1,0 +1,267 @@
+---
+title: "Description of participants"
+author: "Laura Grajeda"
+date: "12 de mayo de 2020"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(sf)
+library(here)
+library(compareGroups)
+```
+
+
+# 1. Aim
+
+Describe participants included in the HUS analysis.
+
+- Create a map of the distribution of the clusters
+- Describe demographic characteristics of the households and individuals
+
+
+# 2. Datos
+
+## Tamizados
+
+```{r}
+PTam <- readRDS(here("1_Create_dataset", "output", "HUS_Dataset.rds"))
+```
+
+
+Filter to the period of interest. Exclude During-COVID - 
+```{r}
+PTam <- PTam %>% filter(Period == "Before COVID - All ages" | Period == "During COVID - <15 years")
+```
+
+
+## Shapefiles
+
+Shape del departmaneto
+```{r}
+my_shapefile <- st_read(here("2_Participants_Description/input/gadm41_GTM_shp/gadm41_GTM_2.shp"))
+my_shapefile <- my_shapefile %>% filter(NAME_1=="Quezaltenango")
+```
+
+
+
+# 3. General description
+
+Number of clusters, households, and persons per period
+
+Pre COVID
+```{r}
+PTam %>% filter(Period == "Before COVID - All ages") %>% 
+  count(cluster)
+
+PTam %>% filter(Period == "Before COVID - All ages") %>% 
+  count(id_record)
+  
+PTam %>% filter(Period == "Before COVID - All ages") %>% 
+  count(IDPersona)
+```
+
+During COVID
+```{r}
+PTam %>% filter(Period == "During COVID - <15 years") %>% 
+  count(cluster)
+
+PTam %>% filter(Period == "During COVID - <15 years") %>% 
+  count(id_record)
+  
+PTam %>% filter(Period == "During COVID - <15 years") %>% 
+  count(IDPersona)
+```
+
+
+# 4. Clusters
+
+
+Municipios
+```{r}
+table(PTam$municipio_des, PTam$COVID)
+```
+
+
+
+
+Mapa
+
+Ver datos. Hay clusters que comparten el mismo centroide.
+```{r}
+PTam %>% distinct(cluster, .keep_all = T) %>% 
+  count(xCent, yCent) %>% 
+  arrange(desc(n))
+
+# -91.62949, 14.86047, n=4: 2 en Concepcion chiquirichapa y 2 en San Juan ostuncalco
+PTam %>% 
+  distinct(cluster, .keep_all = T) %>% 
+  select(cluster, xCent, yCent, municipio_des) %>% arrange(xCent)
+```
+
+
+```{r}
+PTam <- PTam %>% 
+  mutate(Phase = case_when(
+    COVID=="Before" ~ "Nov 2019-Mar 2020",
+    COVID=="During" ~ "Oct 2021-May 2022"))
+```
+
+
+
+Plot
+```{r}
+p<-ggplot() +
+  geom_sf(data = my_shapefile) +
+  geom_jitter(data = PTam, aes(x=xCent, y=yCent, color=Phase), width = 0.005, height = 0.005, alpha=0.5)+
+  geom_point(aes(x=-91.539882, y=14.860765, shape=""), size = 3, colour = "black", fill = "black") +
+  labs(shape="Hospital:", color="Study phase:")+
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+```{r}
+ggsave("output/map.png")
+```
+
+
+# 5. Hogares
+
+
+Household questionnaire was incomplete for: A044-009-02, A147-010-02, A388-013-03
+
+
+Language
+```{r}
+PTam$idiomahogar_des <- factor(PTam$idiomahogar_des)
+```
+
+
+
+Crowding
+```{r}
+PTam %>% count(numPer, casaespaciosdormir, hacinamiento, hacinamiento_cat)
+
+PTam$hacinamiento_cat <- factor(PTam$hacinamiento_cat, 
+                                levels = c("<=2","(2, 3]",">3"), labels = c("<=2", "(2, 3]", ">3"))
+
+PTam %>% count(hacinamiento_cat)
+```
+
+
+Combustible
+```{r}
+PTam %>% count(combustiblecocinaprincipal_cal)
+
+PTam$combustiblecocinaprincipal_cal <- factor(PTam$combustiblecocinaprincipal_cal)
+
+```
+
+
+Fuente de agua
+```{r}
+PTam %>% count(fuenteagua_cal)
+PTam$fuenteagua_cal <- factor(PTam$fuenteagua_cal)
+```
+
+
+
+# 6. Individuos
+
+Edad
+```{r}
+PTam %>% count(edadcat)
+```
+
+Sexo
+```{r}
+PTam %>% count(sexo_des)
+```
+
+Educacion
+```{r}
+# En ensmi esta pregunta de educacion solo se reporte para los mayores de 6 anos
+PTam %>% count(educacion_cal)
+
+PTam <- PTam %>% 
+  mutate(educacion_cal = factor(case_when(
+    edadnum<6 ~ NA_character_,
+    TRUE ~ educacion_cal)))
+```
+Sanitario
+```{r}
+PTam %>% count(sanitario_cal)
+```
+
+
+# 7. Comparison
+
+## By COVID
+
+```{r}
+cg1 <-compareGroups(COVID ~ area_des + municipio_des,
+                  data=PTam,
+                  include.label = T,
+                  include.miss = TRUE)
+
+cg2 <-compareGroups(COVID ~ idiomahogar_des + hacinamiento_cat + 
+                  combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal +
+                    SES_Tertiles,
+                  data=PTam,
+                  include.label = T,
+                  include.miss = TRUE)
+
+cg3 <-compareGroups(COVID ~ edadcat + sexo_des + educacion_cal,
+                  data=PTam,
+                  include.label = T,
+                  include.miss = TRUE)
+
+
+cg<-rbind(`Clusters` = cg1,
+          `Hogares` = cg2,
+          `Individuos` = cg3)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, which.table = "both")
+export2xls(dt, file= "output/Participant characteristics by COVID period.xlsx", which.table = "both")
+```
+
+## By COVID restricted to <15
+
+```{r}
+cg1 <-compareGroups(COVID ~ area_des + municipio_des,
+                  data=PTam %>% filter(edad15=="Menor15"),
+                  include.label = T)
+
+cg2 <-compareGroups(COVID ~ idiomahogar_des + hacinamiento_cat + 
+                  combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + SES_Tertiles,
+                  data=PTam %>% filter(edad15=="Menor15"),
+                  include.label = T)
+
+cg3 <-compareGroups(COVID ~ edadcat + sexo_des + educacion_cal,
+                  data=PTam %>% filter(edad15=="Menor15"),
+                  include.label = T)
+
+
+cg<-rbind(`Clusters` = cg1,
+          `Hogares` = cg2,
+          `Individuos` = cg3)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, which.table = "both")
+export2xls(dt, file= "output/Participant characteristics by COVID period and restricted to younger than 15 yeras.xlsx", which.table = "both")
+```
+
+
+
+THE END
+
+
+
+
+
+
+
+

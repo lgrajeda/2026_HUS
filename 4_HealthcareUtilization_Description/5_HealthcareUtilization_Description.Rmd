@@ -1,0 +1,1620 @@
+---
+title: "Description of Healthcare utilization practices"
+author: "Laura Grajeda"
+date: "2026-04-22"
+output: html_document
+---
+
+
+
+
+```{r include=FALSE}
+library(tidyverse)
+library(survey)
+library(compareGroups)
+library(readxl)
+library(here)
+```
+
+
+# 1. Goal
+
+Describe health care utilization
+
+# 2. Datos
+
+```{r}
+PTam <- readRDS(here("1_Create_dataset","output", "HUS_Dataset.rds")) 
+Censo <- readRDS(here("1_Create_dataset","output", "Population_Totals_CensusDataset.rds")) 
+```
+
+
+
+
+# 3. Variables
+
+
+## + Syndromes
+```{r}
+# Numeric
+PTam$elegibleneumonia_num <- as.numeric(PTam$elegibleneumonia)
+PTam$elegibleili_num <- as.numeric(PTam$elegibleili)
+PTam$elegiblefebril_FUO_num <- as.numeric(PTam$elegiblefebril_FUO)
+PTam$elegiblediarrea_num <- as.numeric(PTam$elegiblediarrea)
+
+
+# Binary
+PTam$elegiblefebril_FUO <- factor(PTam$elegiblefebril_FUO, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegiblefebril7_FUO <- factor(PTam$elegiblefebril7_FUO, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegibleili <- factor(PTam$elegibleili, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegibleili7 <- factor(PTam$elegibleili7, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegiblediarrea <- factor(PTam$elegiblediarrea, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegiblediarrea7 <- factor(PTam$elegiblediarrea7, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegibleneumonia <- factor(PTam$elegibleneumonia, levels = c(1,0), labels = c("Si", "No"))
+```
+
+
+
+## + Sought healthcare
+```{r}
+# For ILI, diarrhea, and FUO
+PTam %>% count(buscoayuda)
+PTam$buscoayuda <- as.numeric(PTam$buscoayuda)
+PTam$buscoayuda_des <- factor(PTam$buscoayuda, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayuda_des, "label")<- "Sought care"
+
+# For pneumonia
+PTam$neumopaayuda <- as.numeric(PTam$neumopaayuda)
+PTam$neumopaayuda_des <- factor(PTam$neumopaayuda, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumopaayuda_des, "label")<- "Sought care"
+```
+
+
+## + Places of healthcare seeking
+
+Place public
+```{r}
+PTam <- PTam %>% 
+  mutate(Publico = ifelse(ClinicaPublica==1 | HospitalPublico==1,1,0),
+         PublicoPneumo = ifelse(ClinicaPublicaPneumo==1 | HospitalPublicaPneumo==1,1,0))
+
+PTam$Publico <- as.numeric(PTam$Publico)
+PTam$Publico_des <- factor(PTam$Publico, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$Publico_des, "label")<- "Public facility (clinic or hospital)"
+
+PTam$PublicoPneumo <- as.numeric(PTam$PublicoPneumo)
+PTam$PublicoPneumo_des <- factor(PTam$PublicoPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$PublicoPneumo_des, "label")<- "Public facility (clinic or hospital)"
+
+```
+
+
+Lugar especifico
+```{r}
+# Farmacia-tienda
+#-----------------
+PTam$FarmaciaTienda <- as.numeric(PTam$FarmaciaTienda)
+PTam$FarmaciaTienda_des <- factor(PTam$FarmaciaTienda, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$FarmaciaTienda_des, "label")<- "Pharmacy or corner store"
+
+PTam$FarmaciaTiendaPneumo <- as.numeric(PTam$FarmaciaTiendaPneumo)
+PTam$FarmaciaTiendaPneumo_des <- factor(PTam$FarmaciaTiendaPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$FarmaciaTiendaPneumo_des, "label")<- "Pharmacy or corner store"
+
+
+# Tradicional
+#-----------------
+PTam$Tradicional <- as.numeric(PTam$Tradicional)
+PTam$Tradicional_des <- factor(PTam$Tradicional, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$Tradicional_des, "label")<- "Traditional care"
+
+PTam$TradicionalPneumo <- as.numeric(PTam$TradicionalPneumo)
+PTam$TradicionalPneumo_des <- factor(PTam$TradicionalPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$TradicionalPneumo_des, "label")<- "Traditional care"
+
+
+# Clinica publica
+#-----------------
+PTam$ClinicaPublica <- as.numeric(PTam$ClinicaPublica)
+PTam$ClinicaPublica_des <- factor(PTam$ClinicaPublica, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$ClinicaPublica_des, "label")<- "Public clinic"
+
+PTam$ClinicaPublicaPneumo <- as.numeric(PTam$ClinicaPublicaPneumo)
+PTam$ClinicaPublicaPneumo_des <- factor(PTam$ClinicaPublicaPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$ClinicaPublicaPneumo_des, "label")<- "Public clinic"
+
+
+# Clinica privada
+#-----------------
+PTam$ClinicaPrivada <- as.numeric(PTam$ClinicaPrivada)
+PTam$ClinicaPrivada_des <- factor(PTam$ClinicaPrivada, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$ClinicaPrivada_des, "label")<- "Private clinic"
+
+PTam$ClinicaPrivadaPneumo <- as.numeric(PTam$ClinicaPrivadaPneumo)
+PTam$ClinicaPrivadaPneumo_des <- factor(PTam$ClinicaPrivadaPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$ClinicaPrivadaPneumo_des, "label")<- "Private clinic"
+
+
+
+# Seguro social
+#-----------------
+PTam$ClinicaSeguroSocial <- as.numeric(PTam$ClinicaSeguroSocial)
+PTam$ClinicaSeguroSocial_des <- factor(PTam$ClinicaSeguroSocial, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$ClinicaSeguroSocial_des, "label")<- "Social security clinic"
+
+PTam$ClinicaSeguroSocialPneumo <- as.numeric(PTam$ClinicaSeguroSocialPneumo)
+PTam$ClinicaSeguroSocialPneumo_des <- factor(PTam$ClinicaSeguroSocialPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$ClinicaSeguroSocialPneumo_des, "label")<- "Social security clinic"
+
+
+
+# Hospital publico
+#-----------------
+PTam$HospitalPublico <- as.numeric(PTam$HospitalPublico)
+PTam$HospitalPublico_des <- factor(PTam$HospitalPublico, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$HospitalPublico_des, "label")<- "Public hospital"
+
+PTam$HospitalPublicaPneumo <- as.numeric(PTam$HospitalPublicaPneumo)
+PTam$HospitalPublicaPneumo_des <- factor(PTam$HospitalPublicaPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$HospitalPublicaPneumo_des, "label")<- "Public hospital"
+
+
+# Hospital privado
+#-----------------
+PTam$HospitalPrivado <- as.numeric(PTam$HospitalPrivado)
+PTam$HospitalPrivado_des <- factor(PTam$HospitalPrivado, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$HospitalPrivado_des, "label")<- "Private hospital"
+
+PTam$HospitalPrivadoPneumo <- as.numeric(PTam$HospitalPrivadoPneumo)
+PTam$HospitalPrivadoPneumo_des <- factor(PTam$HospitalPrivadoPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$HospitalPrivadoPneumo_des, "label")<- "Private hospital"
+```
+
+
+
+## + Antibiotic use
+```{r}
+# Uso de anntibiotico
+#-----------------
+PTam$Antibiotico <- as.numeric(PTam$Antibiotico)
+PTam$Antibiotico_des <- factor(PTam$Antibiotico, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$Antibiotico_des, "label")<- "Antibiotic use"
+
+PTam$AntibioticoPneumo <- as.numeric(PTam$AntibioticoPneumo)
+PTam$AntibioticoPneumo_des <- factor(PTam$AntibioticoPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$AntibioticoPneumo_des, "label")<- "Antibiotic use"
+
+
+# Uso de antibiotico autorecetado
+#-----------------
+PTam$AntibioticoSelf <- as.numeric(PTam$AntibioticoSelf)
+PTam$AntibioticoSelf_des <- factor(PTam$AntibioticoSelf, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$AntibioticoSelf_des, "label")<- "Antibiotic use - self medicated"
+
+PTam$AntibioticoPneumoSelf <- as.numeric(PTam$AntibioticoPneumoSelf)
+PTam$AntibioticoPneumoSelf_des <- factor(PTam$AntibioticoPneumoSelf, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$AntibioticoPneumoSelf_des, "label")<- "Antibiotic use - self medicated"
+
+
+# Antibiotico especifico utilizado
+#-----------------
+PTam <- PTam %>% 
+  mutate(
+    AntibioticoCual_des = case_when(
+      Antibiotico==0 ~ "None",
+      !is.na(AntibioticoCual) ~ AntibioticoCual),
+    
+    AntibioticoCualPneumo_des = case_when(
+      AntibioticoPneumo==0 ~ "None",
+      !is.na(AntibioticoCualPneumo) ~ AntibioticoCualPneumo))
+
+PTam$AntibioticoCual_des <- factor(PTam$AntibioticoCual_des)
+attr(PTam$AntibioticoCual_des, "label")<- "Antibiotic which"
+
+PTam$AntibioticoCualPenumo_des <- factor(PTam$AntibioticoCualPneumo_des)
+attr(PTam$AntibioticoCualPneumo_des, "label")<- "Antibiotic which"
+
+
+
+# Clase de antibiotico utilizado 
+# #-----------------
+PTam <- PTam %>% 
+  mutate(
+    AntibioticoClase_des = case_when(
+      Antibiotico==0 ~ "None",
+      !is.na(AntibioticoClase) ~ AntibioticoClase),
+    AntibioticoClasePneumo_des = case_when(
+      AntibioticoPneumo==0 ~ "None",
+      !is.na(AntibioticoClasePneumo) ~ AntibioticoClasePneumo),
+    
+    BLactam = case_when(
+      AntibioticoClase_des=="B-Lactams" ~ 1,
+      AntibioticoClase_des!="B-Lactams" ~ 0,
+      Antibiotico==0 ~ 0),
+    BLactamPneumo = case_when(
+      AntibioticoClasePneumo_des=="B-Lactams" ~ 1,
+      AntibioticoClasePneumo_des=="B-Lactams and Tetracyclins" ~ 1,
+      AntibioticoClasePneumo_des!="B-Lactams" ~ 0,
+      AntibioticoPneumo==0 ~ 0),
+    
+    Tetracyclins = case_when(
+      AntibioticoClase_des=="Tetracyclins" ~ 1,
+      AntibioticoClase_des!="Tetracyclins" ~ 0,
+      Antibiotico==0 ~ 0),
+    TetracyclinsPneumo = case_when(
+      AntibioticoClasePneumo_des=="Tetracyclins" ~ 1,
+      AntibioticoClasePneumo_des=="B-Lactams and Tetracyclins" ~ 1,
+      AntibioticoClasePneumo_des!="Tetracyclins" ~ 0,
+      AntibioticoPneumo==0 ~ 0),
+    
+    Sulfonamides = case_when(
+      AntibioticoClase_des=="Sulfonamides" ~ 1,
+      AntibioticoClase_des!="Sulfonamides" ~ 0,
+      Antibiotico==0 ~ 0),
+    
+    Macrolides = case_when(
+      AntibioticoClase_des=="Macrolides" ~ 1,
+      AntibioticoClase_des!="Macrolides" ~ 0,
+      Antibiotico==0 ~ 0),
+    MacrolidesPneumo = case_when(
+      AntibioticoClasePneumo_des=="Macrolides" ~ 1,
+      AntibioticoClasePneumo_des!="Macrolides" ~ 0,
+      AntibioticoPneumo==0 ~ 0),
+    
+    Lincosamides = case_when(
+      AntibioticoClase_des=="Lincosamide" ~ 1,
+      AntibioticoClase_des!="Lincosamide" ~ 0,
+      Antibiotico==0 ~ 0),
+    LincosamidesPneumo = case_when(
+      AntibioticoClasePneumo_des=="Lincosamide" ~ 1,
+      AntibioticoClasePneumo_des!="Lincosamide" ~ 0,
+      AntibioticoPneumo==0 ~ 0),
+    
+    Nitroimidazoles = case_when(
+      AntibioticoClase_des=="Nitroimidazoles" ~ 1,
+      AntibioticoClase_des!="Nitroimidazoles" ~ 0,
+      Antibiotico==0 ~ 0),
+    Unknown = case_when(
+      AntibioticoClase_des=="Unknown" ~ 1,
+      AntibioticoClase_des!="Unknown" ~ 0,
+      Antibiotico==0 ~ 0))
+
+PTam$AntibioticoClase_des <- factor(PTam$AntibioticoClase_des, 
+          levels = c("B-Lactams", "Tetracyclins", "Sulfonamides", "Macrolides", 
+                     "Lincosamide", "Nitroimidazoles", "Unknown", "None"))
+attr(PTam$AntibioticoClase_des, "label")<- "Antibiotic type"
+
+
+# Lactams
+#-----------------
+PTam$BLactam <- as.numeric(PTam$BLactam)
+PTam$BLactam_des <- factor(PTam$BLactam, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$BLactam_des, "label")<- "B-Lactams"
+
+PTam$BLactamPneumo <- as.numeric(PTam$BLactamPneumo)
+PTam$BLactamPneumo_des <- factor(PTam$BLactamPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$BLactamPneumo_des, "label")<- "B-Lactams"
+
+# Tetracyclins
+#-----------------
+PTam$Tetracyclins <- as.numeric(PTam$Tetracyclins)
+PTam$Tetracyclins_des <- factor(PTam$Tetracyclins, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$Tetracyclins_des, "label")<- "Tetracyclins"
+
+PTam$TetracyclinsPneumo <- as.numeric(PTam$TetracyclinsPneumo)
+PTam$TetracyclinsPneumo_des <- factor(PTam$TetracyclinsPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$TetracyclinsPneumo_des, "label")<- "Tetracyclins"
+
+# Macrolides
+#-----------------
+PTam$Macrolides <- as.numeric(PTam$Macrolides)
+PTam$Macrolides_des <- factor(PTam$Macrolides, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$Macrolides_des, "label")<- "Macrolides"
+
+PTam$MacrolidesPneumo <- as.numeric(PTam$MacrolidesPneumo)
+PTam$MacrolidesPneumo_des <- factor(PTam$MacrolidesPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$MacrolidesPneumo_des, "label")<- "Macrolides"
+
+# Lincosamides
+#-----------------
+PTam$Lincosamides <- as.numeric(PTam$Lincosamides)
+PTam$Lincosamides_des <- factor(PTam$Lincosamides, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$Lincosamides_des, "label")<- "Lincosamides"
+
+PTam$LincosamidesPneumo <- as.numeric(PTam$LincosamidesPneumo)
+PTam$LincosamidesPneumo_des <- factor(PTam$LincosamidesPneumo, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$LincosamidesPneumo_des, "label")<- "Lincosamides"
+
+```
+
+
+
+## + Razons for not seeking care
+
+```{r}
+# For pneumonia
+PTam$neumoparazon_Nocreyoque1 <- factor(PTam$neumoparazon_Nocreyoque1, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_Nocreyoque1, "label")<- "Did not think the illness was serious enough"
+
+PTam$neumoparazon_Laclinicae2 <- factor(PTam$neumoparazon_Laclinicae2, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_Laclinicae2, "label")<- "Healthcare facility was too far from home"
+
+PTam$neumoparazon_Nohubomedi3 <- factor(PTam$neumoparazon_Nohubomedi3, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_Nohubomedi3, "label")<- "No transportation was available"
+
+PTam$neumoparazon_Noteniadin4 <- factor(PTam$neumoparazon_Noteniadin4, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_Noteniadin4, "label")<- "Did not have enough money"
+
+PTam$neumoparazon_Nopodiades5 <- factor(PTam$neumoparazon_Nopodiades5, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_Nopodiades5, "label")<- "Could not leave household responsibilities"
+
+PTam$neumoparazon_Nopodiaaus6 <- factor(PTam$neumoparazon_Nopodiaaus6, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_Nopodiaaus6, "label")<- "Could not miss work"                     
+
+PTam$neumoparazon_Nosabiaado7 <- factor(PTam$neumoparazon_Nosabiaado7, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_Nosabiaado7, "label")<- "Did not know where to seek care"                     
+
+PTam$neumoparazon_TxAthome <- factor(PTam$neumoparazon_TxAthome, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_TxAthome, "label")<- "Prefer home treatment"
+
+PTam$neumoparazon_Distrust <- factor(PTam$neumoparazon_Distrust, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_Distrust, "label")<- "Distrust of healthcare services"
+
+PTam$neumoparazon_Other <- factor(PTam$neumoparazon_Other, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$neumoparazon_Other, "label")<- "Other reason"
+
+
+# For ILI, diarrhea, and FUO
+#-----------------
+PTam$buscoayudarazones_Nocreyoque1 <- factor(PTam$buscoayudarazones_Nocreyoque1, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_Nocreyoque1, "label")<- "Did not think the illness was serious enough"
+
+PTam$buscoayudarazones_Laclinicae2 <- factor(PTam$buscoayudarazones_Laclinicae2, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_Laclinicae2, "label")<- "Healthcare facility was too far from home"
+
+PTam$buscoayudarazones_Nohubomedi3 <- factor(PTam$buscoayudarazones_Nohubomedi3, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_Nohubomedi3, "label")<- "No transportation was available"
+
+PTam$buscoayudarazones_Noteniadin4 <- factor(PTam$buscoayudarazones_Noteniadin4, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_Noteniadin4, "label")<- "Did not have enough money"
+
+PTam$buscoayudarazones_Nopodiades5 <- factor(PTam$buscoayudarazones_Nopodiades5, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_Nopodiades5, "label")<- "Could not leave household responsibilities"
+
+PTam$buscoayudarazones_Nopodiaaus6 <- factor(PTam$buscoayudarazones_Nopodiaaus6, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_Nopodiaaus6, "label")<- "Could not miss work"                     
+
+PTam$buscoayudarazones_Nosabiaado7 <- factor(PTam$buscoayudarazones_Nosabiaado7, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_Nosabiaado7, "label")<- "Did not know where to seek care"                     
+
+PTam$buscoayudarazones_TxAthome <- factor(PTam$buscoayudarazones_TxAthome, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_TxAthome, "label")<- "Prefer home treatment"
+
+PTam$buscoayudarazones_NoMedicineClose <- factor(PTam$buscoayudarazones_NoMedicineClose, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_NoMedicineClose, "label")<- "Healthcare facilities are closed or undersupplied"
+
+PTam$buscoayudarazones_Distrust <- factor(PTam$buscoayudarazones_Distrust, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_Distrust, "label")<- "Distrust of healthcare services"
+
+PTam$buscoayudarazones_Other <- factor(PTam$buscoayudarazones_Other, levels = c(1,0), labels = c("Si", "No"))
+attr(PTam$buscoayudarazones_Other, "label")<- "Other reason"
+
+```
+
+
+
+## + Other variables
+```{r}
+PTam$edad15 <- factor(PTam$edad15)
+PTam$edad5 <- factor(PTam$edad5, 
+                     levels = c("Menor5", "5oMas"),
+                     labels = c("Menor5", "5oMas"),
+                     ordered = 1)
+PTam$COVID <- factor(PTam$COVID)
+
+
+PTam$idiomahogar_des2 <- factor(ifelse(PTam$idiomahogar_des=="Spanish",1,0),
+                                levels = c(1,0),
+                                labels = c("Spanish", "Maya"))
+
+PTam$edadcat <- factor(PTam$edadcat, 
+                                levels=c("00-04", "05-14", "15-44", "45-64", ">=65"),
+                                labels=c("00-04", "05-14", "15-44", "45-64", ">=65"),
+                                ordered = T)
+```
+
+
+
+# BEFORE COVID
+
+# 4. Proportions
+
+## + Pneumonia
+
+```{r}
+PTam %>% 
+  filter(elegibleneumonia=="Si" & Period=="Before COVID - All ages") |> 
+  count(Period, elegibleneumonia, enfermedadaun,  neumopaayuda)
+```
+
+
+Sought Healthcare
+```{r}
+data<-PTam %>% filter(elegibleneumonia=="Si" & Period =="Before COVID - All ages")
+  
+cg <-compareGroups(edad5 ~ neumopaayuda_des + 
+                     PublicoPneumo_des + FarmaciaTiendaPneumo_des + TradicionalPneumo_des +
+                     ClinicaPublicaPneumo_des + ClinicaPrivadaPneumo_des + 
+                     ClinicaSeguroSocialPneumo_des + HospitalPublicaPneumo_des + HospitalPrivadoPneumo_des +
+                     AntibioticoPneumo_des + AntibioticoPneumoSelf_des +
+                     AntibioticoClasePneumo_des + BLactamPneumo_des + 
+                     TetracyclinsPneumo_des + MacrolidesPneumo_des + LincosamidesPneumo_des +
+                     AntibioticoCualPneumo_des,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Pneumonia_Proportions_BeforeCOVID_AllAges_ByAgeGroup.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+Reasons for not seeking healthcare:
+```{r}
+data<-PTam %>% filter(elegibleneumonia=="Si" & Period =="Before COVID - All ages" & neumopaayuda_des=="No")
+cg <-compareGroups(edad5 ~ neumopaayuda_des + 
+                     neumoparazon_Nocreyoque1 + neumoparazon_Laclinicae2 + 
+                     neumoparazon_Nohubomedi3 + neumoparazon_Noteniadin4 + 
+                     neumoparazon_Nopodiades5 + neumoparazon_Nopodiaaus6 + 
+                     neumoparazon_Nosabiaado7 + neumoparazon_TxAthome + 
+                     neumoparazon_Other + neumoparazon_Distrust,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Pneumonia_Reasons_BeforeCOVID_AllAges_ByAgeGroup.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+
+## + ILI
+
+```{r}
+PTam %>% 
+  filter(elegibleili=="Si" & Period=="Before COVID - All ages") |> 
+  count(Period, elegibleili, enfermedadaun,  buscoayuda)
+```
+
+
+Sought Healthcare:
+```{r}
+data<-PTam %>% filter(elegibleili=="Si" & Period =="Before COVID - All ages")
+
+cg <-compareGroups(edad5 ~ buscoayuda_des + Publico_des +
+                     FarmaciaTienda_des + Tradicional_des +
+                     ClinicaPublica_des + ClinicaPrivada_des + 
+                     ClinicaSeguroSocial_des + HospitalPublico_des + HospitalPrivado_des +
+                     Antibiotico_des + AntibioticoSelf_des +
+                     AntibioticoCual_des +AntibioticoClase_des +
+                     BLactam_des + Tetracyclins_des + Macrolides_des + Lincosamides_des,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/ILI_Proportions_BeforeCOVID_AllAges_ByAgeGroup.xlsx", 
+           header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+Reasons for not seeking healthcare:
+```{r}
+data<-PTam %>% filter(elegibleili=="Si" & Period =="Before COVID - All ages" & buscoayuda_des=="No")
+
+cg <-compareGroups(edad5 ~ buscoayuda_des + buscoayudarazones_Nocreyoque1 +
+                     buscoayudarazones_Laclinicae2 + buscoayudarazones_Nohubomedi3 +
+                     buscoayudarazones_Noteniadin4 + buscoayudarazones_Nopodiades5 +
+                     buscoayudarazones_Nopodiaaus6 + buscoayudarazones_Nosabiaado7 +
+                     buscoayudarazones_TxAthome + buscoayudarazones_NoMedicineClose +
+                     buscoayudarazones_Distrust + buscoayudarazones_Other,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/ILI_Reasons_BeforeCOVID_AllAges_ByAgeGroup.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+## + Diarrhea
+
+```{r}
+PTam %>% 
+  filter(elegiblediarrea=="Si" & Period=="Before COVID - All ages") |> 
+  count(Period, elegiblediarrea, enfermedadaun,  buscoayuda)
+```
+
+Sought Healthcare:
+```{r}
+data<-PTam %>% filter(elegiblediarrea=="Si" & Period =="Before COVID - All ages")
+
+cg <-compareGroups(edad5 ~ buscoayuda_des + Publico_des +
+                     FarmaciaTienda_des + Tradicional_des +
+                     ClinicaPublica_des + ClinicaPrivada_des + 
+                     ClinicaSeguroSocial_des + HospitalPublico_des + HospitalPrivado_des +
+                     Antibiotico_des + AntibioticoSelf_des +
+                     AntibioticoCual_des +AntibioticoClase_des +
+                     BLactam_des + Tetracyclins_des + Macrolides_des + Lincosamides_des,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Diarrhea_Proportions_BeforeCOVID_AllAges_ByAgeGroup.xlsx", 
+           header.labels = c(all = "Elegibles"), which.table = "both")
+
+
+```
+
+Reasons for not seeking healthcare:
+```{r}
+data<-PTam %>% filter(elegiblediarrea=="Si" & Period =="Before COVID - All ages" & buscoayuda_des=="No")
+
+cg <-compareGroups(edad5 ~ buscoayuda_des +buscoayudarazones_Nocreyoque1 +
+                     buscoayudarazones_Laclinicae2 + buscoayudarazones_Nohubomedi3 +
+                     buscoayudarazones_Noteniadin4 + buscoayudarazones_Nopodiades5 +
+                     buscoayudarazones_Nopodiaaus6 + buscoayudarazones_Nosabiaado7 +
+                     buscoayudarazones_TxAthome + buscoayudarazones_NoMedicineClose +
+                     buscoayudarazones_Distrust + buscoayudarazones_Other,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Diarrhea_Reasons_BeforeCOVID_AllAges_ByAgeGroup.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+## + FUO
+
+```{r}
+PTam %>% 
+  filter(elegiblefebril_FUO=="Si" & Period=="Before COVID - All ages") |> 
+  count(Period, elegiblefebril_FUO, enfermedadaun,  buscoayuda)
+```
+
+
+
+# 5. Ratios
+
+
+## Declare survey
+
+
+Aplicar la post estratificacion:
+```{r}
+PTam_S <- svydesign(id = ~cluster+id_record+IDPersona, 
+                   data = PTam,
+                   weights =  ~WeightCluster*WeightHouse*WeightInd)
+PTam_S <-postStratify(PTam_S, strata = ~Strata, population = Censo)
+
+PTam_S
+```
+
+## + Pneumonia
+
+```{r}
+PTam %>% filter(Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0) %>% 
+  count(elegibleneumonia_num)
+
+subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0)
+
+ratio<-svyratio(~neumopaayuda, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio1<-c(variable="SoughtHealthCare", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+# check if is the same
+svymean(~neumopaayuda, subset(PTam_S, Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0), na.rm = TRUE)
+
+ratio<-svyratio(~PublicoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio2<-c(variable="AnyPublicFacility", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTiendaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio3<-c(variable="PharmacyCornerStore", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TradicionalPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio4<-c(variable="TraditionalClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio5<-c(variable="PublicClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivadaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio6<-c(variable="PrivateClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaSeguroSocialPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio7<-c(variable="SocialSecurityClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio8<-c(variable="PublicHospital", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivadoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio9<-c(variable="PrivateHospital",age="All ages",  estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio10<-c(variable="Antibiotics", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumoSelf, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio11<-c(variable="AntibioticsSelf", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactamPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio12<-c(variable="BLactams", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TetracyclinsPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio13<-c(variable="Tetracyclins", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~MacrolidesPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio14<-c(variable="Macrolides", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+```{r}
+PTam %>% filter(Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0 & edad5=="Menor5") %>% 
+  count(elegibleneumonia_num)
+
+subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0 & edad5=="Menor5")
+
+ratio<-svyratio(~neumopaayuda, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio15<-c(variable="SoughtHealthCare", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~PublicoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio16<-c(variable="AnyPublicFacility", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTiendaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio17<-c(variable="PharmacyCornerStore", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TradicionalPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio18<-c(variable="TraditionalClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio19<-c(variable="PublicClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivadaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio20<-c(variable="PrivateClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaSeguroSocialPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio21<-c(variable="SocialSecurityClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio22<-c(variable="PublicHospital", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivadoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio23<-c(variable="PrivateHospital",age="0-4",  estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio24<-c(variable="Antibiotics", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumoSelf, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio25<-c(variable="AntibioticsSelf", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactamPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio26<-c(variable="BLactams", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TetracyclinsPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio27<-c(variable="Tetracyclins", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~MacrolidesPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio28<-c(variable="Macrolides", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+
+```{r}
+PTam %>% filter(Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0 & edad5=="5oMas") %>% 
+  count(elegibleneumonia_num)
+
+subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0 & edad5=="5oMas")
+
+ratio<-svyratio(~neumopaayuda, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio29<-c(variable="SoughtHealthCare", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~PublicoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio30<-c(variable="AnyPublicFacility", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTiendaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio31<-c(variable="PharmacyCornerStore", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TradicionalPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio32<-c(variable="TraditionalClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio33<-c(variable="PublicClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivadaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio34<-c(variable="PrivateClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaSeguroSocialPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio35<-c(variable="SocialSecurityClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio36<-c(variable="PublicHospital", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivadoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio37<-c(variable="PrivateHospital",age=">=5",  estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio38<-c(variable="Antibiotics", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumoSelf, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio39<-c(variable="AntibioticsSelf", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactamPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio40<-c(variable="BLactams", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TetracyclinsPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio41<-c(variable="Tetracyclins", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~MacrolidesPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio42<-c(variable="Macrolides", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+```{r}
+Pneumo <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
+                    ratio7, ratio8, ratio9, ratio10, ratio11, ratio12,
+                    ratio13, ratio14, ratio15, ratio16, ratio17, ratio18,
+                    ratio19, ratio20, ratio21, ratio22, ratio23, ratio24,
+                    ratio25, ratio26, ratio27, ratio28, ratio29,
+                    ratio30, ratio31, ratio32, ratio33, ratio34, ratio35,
+                    ratio36, ratio37, ratio38, ratio39, ratio40, ratio41,
+                    ratio42) |> 
+  dplyr::rename("CI_Low"=CI1, "CI_High"=CI2)
+
+Pneumo
+writexl::write_xlsx(Pneumo, "output/Pneumonia_Ratios_BeforeCOVID_AllAges.xlsx")
+```
+
+## + ILI
+
+
+```{r}
+PTam %>% filter(Period =="Before COVID - All ages" & elegibleili_num==1 & enfermedadaun==0) %>% 
+  count(elegibleili_num)
+
+subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegibleili_num==1 & enfermedadaun==0)
+
+ratio<-svyratio(~buscoayuda, ~elegibleili_num, design=subset, na.rm=T)
+ratio1<-c(variable="SoughtHealthCare", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegibleili_num, design=subset, na.rm=T)
+ratio2<-c(variable="AnyPublicFacility", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegibleili_num, design=subset, na.rm=T)
+ratio3<-c(variable="PharmacyCornerStore", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegibleili_num, design=subset, na.rm=T)
+ratio4<-c(variable="TraditionalClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegibleili_num, design=subset, na.rm=T)
+ratio5<-c(variable="PublicClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegibleili_num, design=subset, na.rm=T)
+ratio6<-c(variable="PrivateClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegibleili_num, design=subset, na.rm=T)
+ratio7<-c(variable="PublicHospital", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegibleili_num, design=subset, na.rm=T)
+ratio8<-c(variable="PrivateHospital", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegibleili_num, design=subset, na.rm=T)
+ratio9<-c(variable="Antibiotic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegibleili_num, design=subset, na.rm=T)
+ratio10<-c(variable="AntibioticSelf", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegibleili_num, design=subset, na.rm=T)
+ratio11<-c(variable="BLactam", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegibleili_num, design=subset, na.rm=T)
+ratio12<-c(variable="Tetracyclins", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegibleili_num, design=subset, na.rm=T)
+ratio13<-c(variable="Sulfonamides", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegibleili_num, design=subset, na.rm=T)
+ratio14<-c(variable="Macrolides", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Lincosamides, ~elegibleili_num, design=subset, na.rm=T)
+ratio15<-c(variable="Lincosamides", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+```{r}
+PTam %>% filter(Period =="Before COVID - All ages" & elegibleili_num==1 & enfermedadaun==0 & edad5=="Menor5") %>% 
+  count(elegibleili_num)
+
+subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegibleili_num==1 & enfermedadaun==0 & edad5=="Menor5")
+
+ratio<-svyratio(~buscoayuda, ~elegibleili_num, design=subset, na.rm=T)
+ratio16<-c(variable="SoughtHealthCare", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegibleili_num, design=subset, na.rm=T)
+ratio17<-c(variable="AnyPublic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegibleili_num, design=subset, na.rm=T)
+ratio18<-c(variable="PharmacyCornerStore", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegibleili_num, design=subset, na.rm=T)
+ratio19<-c(variable="TraditionalClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegibleili_num, design=subset, na.rm=T)
+ratio20<-c(variable="PublicClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegibleili_num, design=subset, na.rm=T)
+ratio21<-c(variable="PrivateClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegibleili_num, design=subset, na.rm=T)
+ratio22<-c(variable="PublicHospital", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegibleili_num, design=subset, na.rm=T)
+ratio23<-c(variable="PrivateHospital", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegibleili_num, design=subset, na.rm=T)
+ratio24<-c(variable="Antibiotic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegibleili_num, design=subset, na.rm=T)
+ratio25<-c(variable="AntibioticSelf", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegibleili_num, design=subset, na.rm=T)
+ratio26<-c(variable="BLactam", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegibleili_num, design=subset, na.rm=T)
+ratio27<-c(variable="Tetracyclins", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegibleili_num, design=subset, na.rm=T)
+ratio28<-c(variable="Sulfonamides", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegibleili_num, design=subset, na.rm=T)
+ratio29<-c(variable="Macrolides", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+```{r}
+PTam %>% filter(Period =="Before COVID - All ages" & elegibleili_num==1 & enfermedadaun==0 & edad5=="5oMas") %>% 
+  count(elegibleili_num)
+
+subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegibleili_num==1 & enfermedadaun==0 & edad5=="5oMas")
+
+ratio<-svyratio(~buscoayuda, ~elegibleili_num, design=subset, na.rm=T)
+ratio30<-c(variable="SoughtHealthCare", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegibleili_num, design=subset, na.rm=T)
+ratio31<-c(variable="AnyPublic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegibleili_num, design=subset, na.rm=T)
+ratio32<-c(variable="PharmacyCornerStore", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegibleili_num, design=subset, na.rm=T)
+ratio33<-c(variable="TraditionalClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegibleili_num, design=subset, na.rm=T)
+ratio34<-c(variable="PublicClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegibleili_num, design=subset, na.rm=T)
+ratio35<-c(variable="PrivateClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegibleili_num, design=subset, na.rm=T)
+ratio36<-c(variable="PublicHospital", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegibleili_num, design=subset, na.rm=T)
+ratio37<-c(variable="PrivateHospital", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegibleili_num, design=subset, na.rm=T)
+ratio38<-c(variable="Antibiotic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegibleili_num, design=subset, na.rm=T)
+ratio39<-c(variable="AntibioticSelf", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegibleili_num, design=subset, na.rm=T)
+ratio40<-c(variable="BLactam", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegibleili_num, design=subset, na.rm=T)
+ratio41<-c(variable="Tetracyclins", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegibleili_num, design=subset, na.rm=T)
+ratio42<-c(variable="Sulfonamides", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegibleili_num, design=subset, na.rm=T)
+ratio43<-c(variable="Macrolides", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+
+```{r}
+ILI <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
+                    ratio7, ratio8, ratio9, ratio10, ratio11, ratio12,
+                    ratio13, ratio14, ratio15, ratio16, ratio17, ratio18,
+                    ratio19, ratio20, ratio21, ratio22, ratio23, ratio24,
+                    ratio25, ratio26, ratio27, ratio28, ratio29,
+                    ratio30, ratio31, ratio32, ratio33, ratio34, ratio35,
+                    ratio36, ratio37, ratio38, ratio39, ratio40, ratio41,
+                    ratio42, ratio43) |> 
+  dplyr::rename("CI_Low"=CI1, "CI_High"=CI2)
+ILI
+writexl::write_xlsx(ILI, "output/ILI_Ratios_BeforeCOVID_AllAges.xlsx")
+```
+
+
+
+
+## + Diarrhea
+
+
+```{r}
+PTam %>% filter(Period =="Before COVID - All ages" & elegiblediarrea_num==1 & enfermedadaun==0) %>% 
+  count(elegiblediarrea_num, buscoayuda, buscoayuda_des, HospitalPublico, HospitalPublico_des, HospitalPrivado, HospitalPrivado_des)
+
+subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegiblediarrea_num==1 & enfermedadaun==0)
+
+ratio<-svyratio(~buscoayuda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio1<-c(variable="SoughtHealthCare", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio2<-c(variable="AnyPublic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio3<-c(variable="PharmacyCornerStore", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio4<-c(variable="TraditionalClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio5<-c(variable="PublicClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio6<-c(variable="PrivateClinic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio7<-c(variable="PublicHospital", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio8<-c(variable="PrivateHospital", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio9<-c(variable="Antibiotic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio10<-c(variable="AntibioticSelf", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio11<-c(variable="BLactam", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio12<-c(variable="Tetracyclins", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio13<-c(variable="Sulfonamides", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio14<-c(variable="Macrolides", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+```{r}
+PTam %>% filter(Period =="Before COVID - All ages" & elegiblediarrea_num==1 & enfermedadaun==0 & edad5=="Menor5") %>% 
+  count(elegiblediarrea_num)
+
+subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegiblediarrea_num==1 & enfermedadaun==0 & edad5=="Menor5")
+
+ratio<-svyratio(~buscoayuda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio15<-c(variable="SoughtHealthCare", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio16<-c(variable="AnyPublic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio17<-c(variable="PharmacyCornerStore", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio18<-c(variable="TraditionalClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio19<-c(variable="PublicClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio20<-c(variable="PrivateClinic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio21<-c(variable="PublicHospital", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio22<-c(variable="PrivateHospital", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio23<-c(variable="Antibiotic", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio24<-c(variable="AntibioticSelf", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio25<-c(variable="BLactam", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio26<-c(variable="Tetracyclins", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio27<-c(variable="Sulfonamides", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio28<-c(variable="Macrolides", age="0-4", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+```{r}
+PTam %>% filter(Period =="Before COVID - All ages" & elegiblediarrea_num==1 & enfermedadaun==0 & edad5=="5oMas") %>% 
+  count(elegiblediarrea_num)
+
+subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegiblediarrea_num==1 & enfermedadaun==0 & edad5=="5oMas")
+
+ratio<-svyratio(~buscoayuda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio29<-c(variable="SoughtHealthCare", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio30<-c(variable="AnyPublic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio31<-c(variable="PharmacyCornerStore", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio32<-c(variable="TraditionalClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio33<-c(variable="PublicClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio34<-c(variable="PrivateClinic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio35<-c(variable="PublicHospital", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio36<-c(variable="PrivateHospital", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio37<-c(variable="Antibiotic", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio38<-c(variable="AntibioticSelf", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio39<-c(variable="BLactam", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio40<-c(variable="Tetracyclins", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio41<-c(variable="Sulfonamides", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio42<-c(variable="Macrolides", age=">=5", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+
+```{r}
+Diarhea <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
+                    ratio7, ratio8, ratio9, ratio10, ratio11, ratio12,
+                    ratio13, ratio14, ratio15, ratio16, ratio17, ratio18,
+                    ratio19, ratio20, ratio21, ratio22, ratio23, ratio24,
+                    ratio25, ratio26, ratio27, ratio28, ratio29,
+                    ratio30, ratio31, ratio32, ratio33, ratio34, ratio35,
+                    ratio36, ratio37, ratio38, ratio39, ratio40, ratio41,
+                    ratio42, ratio43) |> 
+  dplyr::rename("CI_Low"=CI1, "CI_High"=CI2)
+
+Diarhea
+writexl::write_xlsx(ILI, "output/Diarhea_Ratios_BeforeCOVID_AllAges.xlsx")
+```
+
+
+
+## BEFORE & AFTER
+
+# 6. Proportions
+
+## + Pneumonia
+
+Place of healthcare seeking:
+```{r}
+data<-PTam %>% filter(elegibleneumonia=="Si" & Period !="During COVID - All ages" & edad15=="Menor15")
+
+cg <-compareGroups(Period ~ neumopaayuda_des + PublicoPneumo_des +
+                     FarmaciaTiendaPneumo_des + TradicionalPneumo_des +
+                     ClinicaPublicaPneumo_des + ClinicaPrivadaPneumo_des + 
+                     ClinicaSeguroSocialPneumo_des + HospitalPublicaPneumo_des + HospitalPrivadoPneumo_des +
+                     AntibioticoPneumo_des + AntibioticoPneumoSelf_des +
+                     AntibioticoClasePneumo_des + AntibioticoCualPenumo_des +
+                     BLactamPneumo_des + 
+                     TetracyclinsPneumo_des + MacrolidesPneumo_des + LincosamidesPneumo_des,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Pneumonia_Proportions_BeforeDuringCOVID_Children_ByPeriod.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+Reasons for not seeking care
+```{r}
+data<-PTam %>% filter(elegibleneumonia=="Si" & Period !="During COVID - All ages" & edad15=="Menor15" & neumopaayuda_des=="No")
+
+cg <-compareGroups(Period ~  neumoparazon_Nocreyoque1 + neumoparazon_Laclinicae2 + 
+                     neumoparazon_Nohubomedi3 + neumoparazon_Noteniadin4 + 
+                     neumoparazon_Nopodiades5 + neumoparazon_Nopodiaaus6 + 
+                     neumoparazon_Nosabiaado7 + neumoparazon_TxAthome + 
+                     neumoparazon_Other + neumoparazon_Distrust,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Pneumonia_Reasons_BeforeDuringCOVID_Children_ByPeriod.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+
+
+
+
+
+## + ILI
+
+Place of healthcare seeking:
+```{r}
+data<-PTam %>% filter(elegibleili=="Si" & Period !="During COVID - All ages" & edad15=="Menor15")
+
+cg <-compareGroups(Period ~ buscoayuda_des + Publico_des +
+                     FarmaciaTienda_des + Tradicional_des +
+                     ClinicaPublica_des + ClinicaPrivada_des + 
+                     ClinicaSeguroSocial_des + HospitalPublico_des + HospitalPrivado_des +
+                     Antibiotico_des + AntibioticoSelf_des +
+                     AntibioticoCual_des +AntibioticoClase_des +
+                     BLactam_des + Tetracyclins_des + Macrolides_des + Lincosamides_des,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/ILI_Proportions_BeforeDuringCOVID_Children_ByPeriod.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+
+Reasons for not seeking care
+```{r}
+data<-PTam %>% filter(elegibleili=="Si" & Period !="During COVID - All ages" & edad15=="Menor15" & buscoayuda_des=="No")
+
+cg <-compareGroups(Period ~ buscoayudarazones_Nocreyoque1 +
+                     buscoayudarazones_Laclinicae2 + buscoayudarazones_Nohubomedi3 +
+                     buscoayudarazones_Noteniadin4 + buscoayudarazones_Nopodiades5 +
+                     buscoayudarazones_Nopodiaaus6 + buscoayudarazones_Nosabiaado7 +
+                     buscoayudarazones_TxAthome + buscoayudarazones_NoMedicineClose +
+                     buscoayudarazones_Distrust + buscoayudarazones_Other,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/ILI_Reasons_BeforeDuringCOVID_Children_ByPeriod.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+## + Diarrea
+```{r}
+data<-PTam %>% filter(elegiblediarrea=="Si" & Period !="During COVID - All ages" & edad15=="Menor15")
+
+cg <-compareGroups(Period ~ buscoayuda_des + Publico_des +
+                     FarmaciaTienda_des + Tradicional_des +
+                     ClinicaPublica_des + ClinicaPrivada_des + 
+                     ClinicaSeguroSocial_des + HospitalPublico_des + HospitalPrivado_des +
+                     Antibiotico_des + AntibioticoSelf_des +
+                     AntibioticoCual_des +AntibioticoClase_des +
+                     BLactam_des + Tetracyclins_des + Macrolides_des + Lincosamides_des,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Diarrhea_Proportions_BeforeDuringCOVID_Children_ByPeriod.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+Reasons for not seeking care:
+```{r}
+data<-PTam %>% filter(elegiblediarrea=="Si" & Period !="During COVID - All ages" & edad15=="Menor15" & buscoayuda_des=="No")
+
+cg <-compareGroups(Period ~ buscoayudarazones_Nocreyoque1 +
+                     buscoayudarazones_Laclinicae2 + buscoayudarazones_Nohubomedi3 +
+                     buscoayudarazones_Noteniadin4 + buscoayudarazones_Nopodiades5 +
+                     buscoayudarazones_Nopodiaaus6 + buscoayudarazones_Nosabiaado7 +
+                     buscoayudarazones_TxAthome + buscoayudarazones_NoMedicineClose +
+                     buscoayudarazones_Distrust + buscoayudarazones_Other,
+                     data=data,
+                     include.label = T)
+
+dt<-createTable(cg, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Diarrhea_Reasons_BeforeDuringCOVID_Children_ByPeriod.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+
+
+# 7. Ratios
+
+
+## Declare survey
+
+
+Aplicar la post estratificacion:
+```{r}
+PTam_S <- svydesign(id = ~cluster+id_record+IDPersona, 
+                   data = PTam,
+                   weights =  ~WeightCluster*WeightHouse*WeightInd)
+PTam_S <-postStratify(PTam_S, strata = ~Strata, population = Censo)
+
+PTam_S
+```
+
+
+## + Pneumonia
+
+```{r}
+PTam %>% filter(edad15=="Menor15", Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0) %>% 
+  count(elegibleneumonia_num)
+
+subset <- subset( PTam_S, edad15=="Menor15" & Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0)
+
+ratio<-svyratio(~neumopaayuda, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio1<-c(variable="SoughtHealthCare", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~PublicoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio2<-c(variable="AnyPublic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTiendaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio3<-c(variable="PharmacyCornerStore", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TradicionalPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio4<-c(variable="TraditionalClinic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio5<-c(variable="PublicClinic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivadaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio6<-c(variable="PrivateClinic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio7<-c(variable="PublicHospital", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivadoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio8<-c(variable="PrivateHospital", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio9<-c(variable="Antibiotic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumoSelf, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio10<-c(variable="AntibioticSelf", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactamPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio11<-c(variable="BLacta,", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TetracyclinsPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio12<-c(variable="Tetracyclins", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~MacrolidesPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio13<-c(variable="Macrolides", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+```{r}
+PTam %>% filter(edad15=="Menor15", Period =="During COVID - <15 years" & elegibleneumonia_num==1 & enfermedadaun==0) %>% 
+  count(elegibleneumonia_num)
+
+subset <- subset( PTam_S, edad15=="Menor15" & Period =="During COVID - <15 years" & elegibleneumonia_num==1 & enfermedadaun==0)
+
+ratio<-svyratio(~neumopaayuda, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio14<-c(variable="SoughtHealthCare", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~PublicoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio15<-c(variable="AnyPublic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTiendaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio16<-c(variable="PharmacyCornerStore", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TradicionalPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio17<-c(variable="TraditionalClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio18<-c(variable="PublicClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivadaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio19<-c(variable="PrivateClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaSeguroSocialPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio20<-c(variable="SocialSecurityClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublicaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio21<-c(variable="PublicHospital", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivadoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio22<-c(variable="PrivateHospital", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio23<-c(variable="Antibiotic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoPneumoSelf, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio24<-c(variable="AntibioticSelf", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactamPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio25<-c(variable="BLactam", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~TetracyclinsPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio26<-c(variable="Tetracyclins", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~MacrolidesPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio27<-c(variable="Macrolides", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+
+```{r}
+Pneumo <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
+                    ratio7, ratio8, ratio9, ratio10, ratio11, ratio12,
+                    ratio13, ratio14, ratio15, ratio16, ratio17, ratio18,
+                    ratio19, ratio20, ratio21, ratio22, ratio23, ratio24,
+                    ratio25, ratio26, ratio27) |> 
+  dplyr::rename("CI_Low"=CI1, "CI_High"=CI2)
+
+Pneumo
+writexl::write_xlsx(Pneumo, "output/Pneumonia_Ratios_BeforeDuringCOVID_Children.xlsx")
+```
+
+
+
+## + ILI
+
+```{r}
+PTam %>% filter(edad15=="Menor15", Period =="Before COVID - All ages" & elegibleili_num==1 & enfermedadaun==0) %>% 
+  count(elegibleili_num)
+
+subset <- subset( PTam_S, edad15=="Menor15" & Period =="Before COVID - All ages" & elegibleili_num==1 & enfermedadaun==0)
+
+ratio<-svyratio(~buscoayuda, ~elegibleili_num, design=subset, na.rm=T)
+ratio1<-c(variable="SoughtHealthCare", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegibleili_num, design=subset, na.rm=T)
+ratio2<-c(variable="AnyPublic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegibleili_num, design=subset, na.rm=T)
+ratio3<-c(variable="PharmacyCornerStore", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegibleili_num, design=subset, na.rm=T)
+ratio4<-c(variable="TraditionalClinic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegibleili_num, design=subset, na.rm=T)
+ratio5<-c(variable="PublicClinic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegibleili_num, design=subset, na.rm=T)
+ratio6<-c(variable="PrivateClinic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegibleili_num, design=subset, na.rm=T)
+ratio7<-c(variable="PublicHospital", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegibleili_num, design=subset, na.rm=T)
+ratio8<-c(variable="PrivateHospital", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegibleili_num, design=subset, na.rm=T)
+ratio9<-c(variable="Antibiotic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegibleili_num, design=subset, na.rm=T)
+ratio10<-c(variable="AntibioticSelf", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegibleili_num, design=subset, na.rm=T)
+ratio11<-c(variable="BLactam", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegibleili_num, design=subset, na.rm=T)
+ratio12<-c(variable="Tetracyclins", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegibleili_num, design=subset, na.rm=T)
+ratio13<-c(variable="Sulfonamides", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegibleili_num, design=subset, na.rm=T)
+ratio14<-c(variable="SoughtHealthCare", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+
+
+```{r}
+PTam %>% filter(edad15=="Menor15", Period =="During COVID - <15 years" & elegibleili_num==1 & enfermedadaun==0) %>% 
+  count(elegibleili_num)
+
+subset <- subset( PTam_S, edad15=="Menor15" & Period =="During COVID - <15 years" & elegibleili_num==1 & enfermedadaun==0)
+
+ratio<-svyratio(~buscoayuda, ~elegibleili_num, design=subset, na.rm=T)
+ratio15<-c(variable="SoughtHealthCare", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegibleili_num, design=subset, na.rm=T)
+ratio16<-c(variable="AnyPublic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegibleili_num, design=subset, na.rm=T)
+ratio17<-c(variable="PharmacyCornerStore", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegibleili_num, design=subset, na.rm=T)
+ratio18<-c(variable="TraditionalClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegibleili_num, design=subset, na.rm=T)
+ratio19<-c(variable="PublicClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegibleili_num, design=subset, na.rm=T)
+ratio20<-c(variable="PrivateClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaSeguroSocial, ~elegibleili_num, design=subset, na.rm=T)
+ratio21<-c(variable="SocialSecurityClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegibleili_num, design=subset, na.rm=T)
+ratio22<-c(variable="PublicHospital", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegibleili_num, design=subset, na.rm=T)
+ratio23<-c(variable="PrivateHospital", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegibleili_num, design=subset, na.rm=T)
+ratio24<-c(variable="Antibiotic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegibleili_num, design=subset, na.rm=T)
+ratio25<-c(variable="AntibioticSelf", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegibleili_num, design=subset, na.rm=T)
+ratio26<-c(variable="BLactams", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegibleili_num, design=subset, na.rm=T)
+ratio27<-c(variable="Tetracyclins", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegibleili_num, design=subset, na.rm=T)
+ratio28<-c(variable="Sulfonamides", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegibleili_num, design=subset, na.rm=T)
+ratio29<-c(variable="Macrolides", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+```{r}
+ILI <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
+                    ratio7, ratio8, ratio9, ratio10, ratio11, ratio12,
+                    ratio13, ratio14, ratio15, ratio16, ratio17, ratio18,
+                    ratio19, ratio20, ratio21, ratio22, ratio23, ratio24,
+                    ratio25, ratio26, ratio27, ratio28, ratio29) |> 
+  dplyr::rename("CI_Low"=CI1, "CI_High"=CI2)
+
+ILI
+writexl::write_xlsx(ILI, "output/ILI_Ratios_BeforeDuringCOVID_Children.xlsx")
+```
+
+
+
+## + Diarrhea
+
+```{r}
+PTam %>% filter(edad15=="Menor15", Period =="Before COVID - All ages" & elegiblediarrea=="Si" & enfermedadaun==0) %>%   count(elegiblediarrea)
+
+subset <- subset( PTam_S, edad15=="Menor15" & Period =="Before COVID - All ages" & elegiblediarrea_num==1 & enfermedadaun==0)
+
+ratio<-svyratio(~buscoayuda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio1<-c(variable="SoughtHealthCare", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio2<-c(variable="AnyPublic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio3<-c(variable="PharmacyCornerStore", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio4<-c(variable="TraditionalClinic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio5<-c(variable="PublicClinic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio6<-c(variable="PrivateClinic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio7<-c(variable="PublicHospital", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio8<-c(variable="PrivateHospital", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio9<-c(variable="Antibiotic", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio10<-c(variable="AntibioticSelf", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio11<-c(variable="BLactam", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio12<-c(variable="Tetracyclins", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio13<-c(variable="Sulfonamides", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio14<-c(variable="Macrolides", age="<15 years", Period="Before COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+```{r}
+PTam %>% filter(edad15=="Menor15", Period =="During COVID - <15 years" & elegiblediarrea_num==1 & enfermedadaun==0) %>% 
+  count(elegiblediarrea_num, AntibioticoClase_des, BLactam, Tetracyclins)
+
+subset <- subset(PTam_S, edad15=="Menor15" & Period =="During COVID - <15 years" & elegiblediarrea_num==1 & enfermedadaun==0)
+
+ratio<-svyratio(~buscoayuda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio15<-c(variable="SoughtHealthCare", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Publico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio16<-c(variable="AnyPublic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~FarmaciaTienda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio17<-c(variable="PharmacyCornerStore", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tradicional, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio18<-c(variable="TraditionalClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPublica, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio19<-c(variable="PublicClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaPrivada, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio20<-c(variable="PrivateClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~ClinicaSeguroSocial, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio21<-c(variable="SocialSecurityClinic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPublico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio22<-c(variable="PublicHospital", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~HospitalPrivado, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio23<-c(variable="PrivateHospital", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Antibiotico, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio24<-c(variable="Antibiotic", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~AntibioticoSelf, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio25<-c(variable="AntibioticSelf", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~BLactam, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio26<-c(variable="BLactam", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Tetracyclins, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio27<-c(variable="Tetracyclins", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Sulfonamides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio28<-c(variable="Sulfonamides", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Macrolides, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio29<-c(variable="Macrolides", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Nitroimidazoles, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio30<-c(variable="Nitroimidazoles", age="<15 years", Period="During COVID", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+```
+
+
+```{r}
+Diarrhea <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
+                    ratio7, ratio8, ratio9, ratio10, ratio11, ratio12,
+                    ratio13, ratio14, ratio15, ratio16, ratio17, ratio18,
+                    ratio19, ratio20, ratio21, ratio22, ratio23, ratio24,
+                    ratio25, ratio26, ratio27, ratio28, ratio29, ratio30) |> 
+  dplyr::rename("CI_Low"=CI1, "CI_High"=CI2)
+
+Diarrhea
+writexl::write_xlsx(Diarrhea, "output/Diarrhea_Ratios_BeforeDuringCOVID_Children.xlsx")
+```
+
+
+## FIN
+

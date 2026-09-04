@@ -1,0 +1,1041 @@
+---
+title: "Estimate syndromic prevalences"
+author: "Laura Grajeda"
+date: "11 de mayo de 2020"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 2
+    df_print: paged
+  pdf_document:
+    keep_tex: no
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+---
+
+
+```{r include=FALSE}
+library(tidyverse)
+library(survey)
+library(compareGroups)
+library(readxl)
+library(here)
+library(broom)
+```
+
+
+# 1. Objetivo
+
+Estimate the prevalence of pneumonia, ILI, Diarrhea, and FUO. This includes
+
+-Calculate proportions
+-Calculate prevalence taking into account the weights and poststratification
+-Compare the prevalence before and during the pandemic using prevalence ratios
+
+Every calculation is done stratified by population group
+
+# 2. Datos
+
+```{r}
+PTam <- readRDS(here("1_Create_dataset","output", "HUS_dataset.rds")) 
+pop3 <- readRDS(here("1_Create_dataset","output", "Population_Totals_CensusDataset.rds")) 
+```
+
+
+Create numerical and factor variables for syndrome
+```{r}
+PTam$elegibleneumonia_num <- as.numeric(PTam$elegibleneumonia)
+PTam$elegibleili_num <- as.numeric(PTam$elegibleili)
+PTam$elegiblefebril_FUO_num <- as.numeric(PTam$elegiblefebril_FUO)
+PTam$elegiblediarrea_num <- as.numeric(PTam$elegiblediarrea)
+
+
+PTam$elegiblefebril_FUO <- factor(PTam$elegiblefebril_FUO, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegiblefebril7_FUO <- factor(PTam$elegiblefebril7_FUO, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegibleili <- factor(PTam$elegibleili, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegibleili7 <- factor(PTam$elegibleili7, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegiblediarrea <- factor(PTam$elegiblediarrea, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegiblediarrea7 <- factor(PTam$elegiblediarrea7, levels = c(1,0), labels = c("Si", "No"))
+PTam$elegibleneumonia <- factor(PTam$elegibleneumonia, levels = c(1,0), labels = c("Si", "No"))
+```
+
+Create factor variables for period and population groups
+```{r}
+PTam$edad15 <- factor(PTam$edad15)
+PTam$edad5 <- factor(PTam$edad5)
+PTam$COVID <- factor(PTam$COVID)
+PTam$COVID_num <- ifelse(PTam$COVID=="During",0,1)
+```
+
+
+Sociodemographic variables
+```{r}
+PTam |> count(hacinamiento_cat)
+PTam$hacinamiento_cat <- factor(PTam$hacinamiento_cat, 
+                                levels=c("<=2", "(2, 3]", ">3"),
+                                labels=c("<=2", "(2, 3]", ">3"),
+                                ordered = T)
+PTam$hacinamiento_bin <- ifelse(PTam$hacinamiento_cat==">3",1,0)
+
+
+PTam |> count(SES_Tertiles)
+PTam$SES_Tertiles <- factor(PTam$SES_Tertiles, 
+                                levels=c("Low", "Medium", "High"),
+                                labels=c("Low", "Medium", "High"),
+                                ordered = T)
+
+PTam |> count(edadcat)
+PTam$edadcat <- factor(PTam$edadcat, 
+                                levels=c("00-04", "05-14", "15-44", "45-64", ">=65"),
+                                labels=c("00-04", "05-14", "15-44", "45-64", ">=65"),
+                                ordered = T)
+
+PTam |> count(idiomahogar_des)
+PTam$idiomahogar_des2 <- factor(ifelse(PTam$idiomahogar_des=="Spanish",1,0),
+                                levels = c(1,0),
+                                labels = c("Spanish", "Maya"))
+PTam$idiomahogar_des <- factor(PTam$idiomahogar_des)
+  
+  
+PTam |> count(combustiblecocinaprincipal_cal)
+PTam$combustiblecocinaprincipal_cal <- factor(PTam$combustiblecocinaprincipal_cal)
+
+PTam |> count(fuenteagua_cal)
+PTam$fuenteagua_cal <- factor(PTam$fuenteagua_cal)
+
+PTam |> count(sanitario_cal)
+PTam$sanitario_cal <- factor(PTam$sanitario_cal)
+
+PTam |> count(sexo_des)
+PTam$sexo_des <- factor(PTam$sexo_des)
+```
+
+
+```{r}
+PTam |> count(Period)
+```
+
+
+# 3. Proportions
+
+## BEFORE COVID
+
+Solo incluir el periodo que no esta afectado por COVID. Este periodo tiene personas de todas las edades. 
+
+## + By edad5
+```{r}
+Prev <-compareGroups(edad5 ~ elegibleneumonia + 
+                     elegibleili + elegibleili7 +
+                     elegiblefebril_FUO + elegiblefebril7_FUO + 
+                     elegiblediarrea + elegiblediarrea7,
+                     # solo incluye datos PRE-COVID  
+                     data=PTam %>% filter(Period=="Before COVID - All ages"),
+                     method = c(edad=2),
+                     include.label = T)
+
+dt<-createTable(Prev, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Proportions_Before COVID by age group.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+  
+## + By sex
+```{r}
+Prev <-compareGroups(sexo_des ~ elegibleneumonia + 
+                     elegibleili + elegibleili7 +
+                     elegiblefebril_FUO + elegiblefebril7_FUO + 
+                     elegiblediarrea + elegiblediarrea7,
+                     # solo incluye datos PRE-COVID  
+                     data=PTam %>% filter(Period=="Before COVID - All ages"),
+                     method = c(edad=2),
+                     include.label = T)
+
+dt<-createTable(Prev, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+#export2xls(dt, file= "output/Proportions_Before COVID by sex group.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+## BEFORE AND DURING COVID
+
+Solo incluye individuos <15 anos y quita periodo during covid de AMR. En este periodo se excluyeron hogares y personas por tener COVID, es decir se exclueron personas que podrian ser positivas para algun sindrome. Este periodo tambien incluye meses diferentes y esto podria dar dudas sobre la comparabilidad.
+                    
+## + Overall 
+```{r}
+Prev <-compareGroups(COVID ~ elegibleneumonia + 
+                    elegibleili + elegibleili7 +
+                    elegiblefebril_FUO + elegiblefebril7_FUO + 
+                    elegiblediarrea + elegiblediarrea7,
+                    # Solo incluye individuos <15 anos y quita periodo during covid de AMR. 
+                    # En este periodo se excluyeron hogares y personas por tener COVID, 
+                    # es decir se exclueron personas que podrian ser positivas para algun sindrome.
+                    # Este periodo tambien incluye meses diferentes y esto podria dar dudas sobre la comparabilidad.
+                    data=PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15"),
+                    method = c(edad=2),
+                    include.label = T)
+
+dt<-createTable(Prev, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Proportions_Before and during COVID in 0 to 1 15 years.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+## + 0 a 4 anos
+```{r}
+Prev <-compareGroups(COVID ~ elegibleneumonia + 
+                        elegibleili + elegibleili7 +
+                        elegiblefebril_FUO + elegiblefebril7_FUO + 
+                     elegiblediarrea + elegiblediarrea7,
+                  data=PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="Menor5"),
+                  method = c(edad=2),
+                  include.label = T)
+
+dt<-createTable(Prev, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Proportions_Before and during COVID in 0 to 4 years.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+## + 5 a 14 anos
+```{r}
+Prev <-compareGroups(COVID ~ elegibleneumonia + 
+                        elegibleili + elegibleili7 +
+                        elegiblefebril_FUO + elegiblefebril7_FUO + 
+                     elegiblediarrea + elegiblediarrea7,
+                  data=PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas"),
+                  method = c(edad=2),
+                  include.label = T)
+
+dt<-createTable(Prev, digits = 0, show.n = T, show.all = T)
+print(dt, header.labels = c(all = "Prevalencias"), which.table = "both")
+export2xls(dt, file= "output/Proportions_Before and during COVID in 5 to 14 years.xlsx", header.labels = c(all = "Elegibles"), which.table = "both")
+```
+
+
+
+
+
+
+# 4. Prevalences
+
+
+Aplicar la post estratificacion:
+```{r}
+PTam_S <- svydesign(id = ~cluster+id_record+IDPersona, 
+                   data = PTam,
+                   weights =  ~WeightCluster*WeightHouse*WeightInd)
+PTam_S_Str <-postStratify(PTam_S, strata = ~Strata, population = pop3)
+
+```
+
+
+##  BEFORE COVID
+
+```{r}
+subset <- subset(PTam_S_Str, Period =="Before COVID - All ages")
+```
+
+
+## + Contrasts (svychisq)
+
+Diff by age
+```{r}
+svychisq(~elegibleneumonia+edad5, design = subset, statistic="F")
+svychisq(~elegibleili+edad5, design = subset, statistic="F")
+svychisq(~elegiblefebril_FUO+edad5, design = subset, statistic="F")
+svychisq(~elegiblediarrea+edad5, design = subset, statistic="F")
+```
+
+Diff by sex
+```{r}
+svychisq(~elegibleneumonia+sexo_des, design = subset, statistic="F")
+svychisq(~elegibleili+sexo_des, design = subset, statistic="F")
+svychisq(~elegiblefebril_FUO+sexo_des, design = subset, statistic="F")
+svychisq(~elegiblediarrea+sexo_des, design = subset, statistic="F")
+```
+
+
+
+## + Prev: Overall (svymean)
+
+```{r}
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+means
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c1<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age="All",
+         Sex="All") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>% 
+  rownames_to_column()
+c1
+```
+
+
+
+## + Prev: Menor5
+
+```{r}
+subset <- subset(PTam_S_Str, Period =="Before COVID - All ages" & edad5=="Menor5")
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+means
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c2<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age="<5",
+         Sex="All") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>%  
+  rownames_to_column()
+
+c2
+```
+
+## + Prev: 5oMas
+
+```{r}
+subset <- subset(PTam_S_Str, Period =="Before COVID - All ages" & edad5=="5oMas")
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+means
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c3<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age=">=5",
+         Sex="All") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>% 
+  rownames_to_column()
+
+c3
+```
+
+## + Prev: Menor5-Males
+
+```{r}
+subset <- subset(PTam_S_Str, Period =="Before COVID - All ages" & edad5=="Menor5" & sexo_des=="Masculino")
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+means
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c4<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age="<5",
+         Sex="Males") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>%  
+  rownames_to_column()
+
+c4
+```
+
+
+## + Prev: Menor5-Females
+
+```{r}
+subset <- subset(PTam_S_Str, Period =="Before COVID - All ages" & edad5=="Menor5" & sexo_des=="Femenino")
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+means
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c5<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age="<5",
+         Sex="Females") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>%  
+  rownames_to_column()
+
+c5
+```
+
+## + Prev: 5oMas-Males
+
+```{r}
+subset <- subset(PTam_S_Str, Period =="Before COVID - All ages" & edad5=="5oMas" & sexo_des=="Masculino")
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+means
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c6<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age=">=5",
+         Sex="Males") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>%  
+  rownames_to_column()
+
+c6
+```
+
+
+## + Prev: 5oMas-Females
+
+```{r}
+subset <- subset(PTam_S_Str, Period =="Before COVID - All ages" & edad5=="5oMas" & sexo_des=="Femenino")
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+means
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c7<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age=">=5",
+         Sex="Females") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>%  
+  rownames_to_column()
+
+c7
+```
+
+
+
+## + Bind
+
+```{r}
+C <- bind_rows(c1, c2, c3, c4, c5, c6, c7)
+C
+
+write_rds(C, "output/Prevalences_PreCOVID_AllAges.rds")
+writexl::write_xlsx(C, "output/Prevalences_PreCOVID_AllAges.xlsx")
+```
+
+
+
+
+
+## BEFORE AND DURING COVID
+
+
+## + Prev: Before - 0to14 (svymean)
+
+```{r}
+subset <- subset(PTam_S_Str, Period=="Before COVID - All ages" & edad15=="Menor15")
+
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c1<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age="0to14",
+         Sex="All") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>% 
+  rownames_to_column()
+c1
+```
+
+
+## + Prev: Before - 0to4
+
+```{r}
+PTam %>% filter(Period=="Before COVID - All ages" & edad5=="Menor5") %>% count(Period, edad15, edad5)
+subset <- subset(PTam_S_Str, Period=="Before COVID - All ages" & edad5=="Menor5")
+
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c2<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age="0to4",
+         Sex="All") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>% 
+  rownames_to_column()
+c2
+```
+
+
+## + Prev: Before - 5to14
+
+```{r}
+PTam %>% filter(Period=="Before COVID - All ages" & edad5=="5oMas" & edad15=="Menor15") %>% count(Period, edad15, edad5)
+
+
+subset <- subset(PTam_S_Str, Period=="Before COVID - All ages" & edad5=="5oMas" & edad15=="Menor15")
+
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c3<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "Before COVID - All ages",
+         Age="5to14",
+         Sex="All") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>% 
+  rownames_to_column()
+c3
+```
+
+
+## + Prev: During - 0to14
+
+```{r}
+PTam %>% filter(Period=="During COVID - <15 years" & edad15=="Menor15") %>% count(Period, edad15, edad5)
+subset <- subset(PTam_S_Str, Period=="During COVID - <15 years" & edad15=="Menor15")
+
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c4<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "During COVID - <15 years",
+         Age="0to14",
+         Sex="All") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>% 
+  rownames_to_column()
+c4
+```
+
+
+## + Prev: During - 0to4
+
+```{r}
+PTam %>% filter(Period=="During COVID - <15 years" & edad5=="Menor5") %>% count(Period, edad15, edad5)
+subset <- subset(PTam_S_Str, Period=="During COVID - <15 years" & edad5=="Menor5")
+
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c5<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "During COVID - <15 years",
+         Age="0to4",
+         Sex="All") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>% 
+  rownames_to_column()
+c5
+```
+
+
+## + Prev: During - 5to14
+
+```{r}
+PTam %>% filter(Period=="During COVID - <15 years" & edad5=="5oMas" & edad15=="Menor15") %>% count(Period, edad15, edad5)
+
+
+subset <- subset(PTam_S_Str, Period=="During COVID - <15 years" & edad5=="5oMas" & edad15=="Menor15")
+
+means <- svymean(~elegibleneumonia +
+                  elegibleili + elegibleili7 +
+                  elegiblefebril_FUO + elegiblefebril7_FUO + 
+                  elegiblediarrea + elegiblediarrea7, 
+                 subset, deff=T)
+
+a<-as.data.frame(means) [c(1,3,5,7,9,11,13),]
+b<-round(confint(means)[c(1,3,5,7,9,11,13),]*100)
+
+c6<-a %>% 
+  mutate(mean = round(mean*100),
+         deff = round(deff,2),
+         SE = round(SE,2),
+         Period = "During COVID - <15 years",
+         Age="5to14",
+         Sex="All") %>%
+  cbind(b) %>%
+  select( Period, Age, Sex, mean, `2.5 %`, `97.5 %`, SE, deff) %>% 
+  rownames_to_column()
+c6
+```
+
+## + Bind
+
+```{r}
+C <- bind_rows(c1, c2, c3, c4, c5, c6)
+C
+
+write_rds(C, "output/Prevalences_BeforeAfterCovid_Children.rds")
+writexl::write_xlsx(C, "output/Prevalences_BeforeAfterCovid_Children.xlsx")
+```
+
+
+## + Contrasts (svychist)
+
+Diff by covid among 0 to 14
+```{r}
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15")
+svychisq(~elegibleneumonia+COVID, design = subset, statistic="F")
+svychisq(~elegibleili+COVID, design = subset, statistic="F")
+svychisq(~elegibleili7+COVID, design = subset, statistic="F")
+svychisq(~elegiblefebril_FUO+COVID, design = subset, statistic="F")
+svychisq(~elegiblefebril7_FUO+COVID, design = subset, statistic="F")
+svychisq(~elegiblediarrea+COVID, design = subset, statistic="F")
+svychisq(~elegiblediarrea7+COVID, design = subset, statistic="F")
+```
+
+Diff by covid among 0 to 4
+```{r}
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="Menor5")
+svychisq(~elegibleneumonia+COVID, design = subset, statistic="F")
+svychisq(~elegibleili+COVID, design = subset, statistic="F")
+svychisq(~elegibleili7+COVID, design = subset, statistic="F")
+svychisq(~elegiblefebril_FUO+COVID, design = subset, statistic="F")
+svychisq(~elegiblefebril7_FUO+COVID, design = subset, statistic="F")
+svychisq(~elegiblediarrea+COVID, design = subset, statistic="F")
+svychisq(~elegiblediarrea7+COVID, design = subset, statistic="F")
+```
+Diff by covid among 4 to 14
+```{r}
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas")
+svychisq(~elegibleneumonia+COVID, design = subset, statistic="F")
+svychisq(~elegibleili+COVID, design = subset, statistic="F")
+svychisq(~elegibleili7+COVID, design = subset, statistic="F")
+svychisq(~elegiblefebril_FUO+COVID, design = subset, statistic="F")
+svychisq(~elegiblefebril7_FUO+COVID, design = subset, statistic="F")
+svychisq(~elegiblediarrea+COVID, design = subset, statistic="F")
+svychisq(~elegiblediarrea7+COVID, design = subset, statistic="F")
+```
+
+
+
+# 5. Odds ratios
+
+## COMPARE BEFORE AND DURING COVID
+
+
+
+
+## + Overall
+
+Penumonia
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15") %>% count(Period, edad15, edad5)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15")
+
+
+# Prevalence ratios
+M<-svyglm(elegibleneumonia_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_1 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "<15",
+         Sx = "Pneumonia")
+SPR_1
+
+
+# odds ratios
+M<-svyglm(elegibleneumonia_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasibinomial(link = "logit"))
+
+tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2)))
+```
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15" ) 
+
+sub <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15")
+
+
+# Prevalence ratios
+M<-svyglm(elegibleili_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = sub, family = quasipoisson(link = "log"))
+
+SPR_2 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "<15",
+         Sx = "ILI")
+SPR_2
+
+
+
+# odds ratios
+M<-svyglm(elegibleili_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasibinomial(link = "logit"))
+
+tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2)))
+```
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15") %>% count(Period, edad15, edad5)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15")
+
+# Prevalence ratio
+M<-svyglm(elegiblefebril_FUO_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_3 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "<15",
+         Sx = "FUO")
+SPR_3
+
+
+# odds ratios
+M<-svyglm(elegiblefebril_FUO_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasibinomial(link = "logit"))
+
+tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2)))
+```
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15") %>% count(Period, edad15, edad5)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15")
+
+# Prevalence ratio
+M<-svyglm(elegiblediarrea_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_4 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "<15",
+         Sx = "Diarrea")
+SPR_4
+
+
+# odds ratios
+M<-svyglm(elegiblediarrea_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasibinomial(link = "logit"))
+
+tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2)))
+```
+
+
+
+## + 0-4
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad5=="Menor5") %>% count(Period, edad15, edad5)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad5=="Menor5")
+M<-svyglm(elegibleneumonia_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_5 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "0-4",
+         Sx = "Neumonia")
+SPR_5
+```
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad5=="Menor5") %>% count(Period, edad15, edad5)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad5=="Menor5")
+M<-svyglm(elegibleili_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_6 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "0-4",
+         Sx = "ILI")
+SPR_6
+```
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad5=="Menor5") %>% count(Period, edad15, edad5, elegiblefebril_FUO)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad5=="Menor5")
+M<-svyglm(elegiblefebril_FUO_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_7 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "0-4",
+         Sx = "FUO")
+SPR_7
+```
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad5=="Menor5") %>% count(Period, edad15, edad5, elegiblefebril_FUO)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad5=="Menor5")
+M<-svyglm(elegiblediarrea_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_8 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "0-4",
+         Sx = "Diarrea")
+SPR_8
+```
+
+## + 5-14
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas") %>% count(Period, edad15, edad5)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas")
+M<-svyglm(elegibleneumonia_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_9 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "5-14",
+         Sx = "Neumonia")
+SPR_9
+```
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas") %>% count(Period, edad15, edad5)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas")
+M<-svyglm(elegibleili_num ~ COVID + 
+         idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_10 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "5-14",
+         Sx = "ILI")
+SPR_10
+```
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas") %>% count(Period, edad15, edad5, elegiblefebril_FUO)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas")
+
+
+M<-svyglm(elegiblefebril_FUO_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_11 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "5-14",
+         Sx = "FUO")
+SPR_11
+```
+
+
+
+```{r}
+PTam %>% filter(Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas") %>% count(Period, edad15, edad5, elegiblefebril_FUO)
+
+subset <- subset(PTam_S_Str, Period!="During COVID - All ages" & edad15=="Menor15" & edad5=="5oMas")
+M<-svyglm(elegiblediarrea_num ~ COVID + 
+          idiomahogar_des + hacinamiento_cat + 
+          combustiblecocinaprincipal_cal + fuenteagua_cal + sanitario_cal + 
+          SES_Tertiles +
+          sexo_des + edadcat, 
+          design = subset, family = quasipoisson(link = "log"))
+
+SPR_12 <- tidy(M, exponentiate = TRUE, conf.int = TRUE) |> 
+  filter(term=="COVIDDuring") %>% 
+  mutate(across(c(estimate, std.error, statistic, conf.low, conf.high), ~ round(.x, 2))) |> 
+  mutate(Age = "5-14",
+         Sx = "Diarrea")
+SPR_12
+```
+
+
+## + Bind
+
+
+```{r}
+C <- bind_rows(SPR_1, SPR_2, SPR_3, SPR_4,
+               SPR_5, SPR_6, SPR_7, SPR_8,
+               SPR_9, SPR_10, SPR_11, SPR_12)
+C
+
+write_rds(C, "output/PrevalenceRatios_BeforeAfterCovid_Children.rds")
+writexl::write_xlsx(C, "output/PrevalenceRatios_BeforeAfterCovid_Children.xlsx")
+```
+
+```{r}
+class(PTam$elegiblediarrea_num)
+class(PTam$COVID)
+class(PTam$idiomahogar_des)
+class(PTam$hacinamiento_cat)
+class(PTam$combustiblecocinaprincipal_cal)
+class(PTam$fuenteagua_cal)
+class(PTam$sanitario_cal)
+class(PTam$SES_Tertiles)
+class(PTam$sexo_des)
+class(PTam$edadcat)
+```
+
+
+
+
+## THE END
