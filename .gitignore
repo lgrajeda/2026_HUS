@@ -14,7 +14,7 @@ config.yml
 
 # Ignore specific folders
 input/
-
+old/
 
 # Ignore specific file
 MySQL_Login_Credentials.R
