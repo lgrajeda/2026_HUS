@@ -424,10 +424,100 @@ PTam$edadcat <- factor(PTam$edadcat,
 ```
 
 
+# 4. Table of recovered today
+
+Pneumonia
+```{r}
+PTam |> filter(
+  elegibleneumonia=="Si" &
+  Period=="Before COVID - All ages" & 
+  edad15 == "Menor15") |> 
+  count(elegibleneumonia, enfermedadaun, neumopaayuda)
+
+
+PTam |> filter(
+  elegibleneumonia=="Si" &
+  Period=="Before COVID - All ages" & 
+  edad15 == "15oMas") |> 
+  count(elegibleneumonia, enfermedadaun, neumopaayuda)
+
+
+PTam |> filter(
+  elegibleneumonia=="Si" &
+  Period=="During COVID - <15 years") |> 
+  count(elegibleneumonia, enfermedadaun, neumopaayuda)
+
+```
+
+ILI
+```{r}
+PTam |> filter(
+  elegibleili=="Si" &
+  Period=="Before COVID - All ages" & 
+  edad15 == "Menor15") |> 
+  count(elegibleili, enfermedadaun, buscoayuda)
+
+
+PTam |> filter(
+  elegibleili=="Si" &
+  Period=="Before COVID - All ages" & 
+  edad15 == "15oMas") |> 
+  count(elegibleili, enfermedadaun, buscoayuda)
+
+
+PTam |> filter(
+  elegibleili=="Si" &
+  Period=="During COVID - <15 years") |> 
+  count(elegibleili, enfermedadaun, buscoayuda)
+
+```
+
+
+Diarrhea
+```{r}
+PTam |> filter(
+  elegiblediarrea=="Si" &
+  Period=="Before COVID - All ages" & 
+  edad15 == "Menor15") |> 
+  count(elegiblediarrea, enfermedadaun, buscoayuda)
+
+PTam |> filter(
+  elegiblediarrea=="Si" &
+  Period=="Before COVID - All ages" & 
+  edad15 == "15oMas") |> 
+  count(elegiblediarrea, enfermedadaun, buscoayuda)
+
+PTam |> filter(
+  elegiblediarrea=="Si" &
+  Period=="During COVID - <15 years") |> 
+  count(elegiblediarrea, enfermedadaun, buscoayuda)
+```
+
+
+FUO
+```{r}
+PTam |> filter(
+  elegiblefebril_FUO=="Si" &
+  Period=="Before COVID - All ages" & 
+  edad15 == "Menor15") |> 
+  count(elegiblefebril_FUO, enfermedadaun, buscoayuda)
+
+PTam |> filter(
+  elegiblefebril_FUO=="Si" &
+  Period=="Before COVID - All ages" & 
+  edad15 == "15oMas") |> 
+  count(elegiblefebril_FUO, enfermedadaun, buscoayuda)
+
+PTam |> filter(
+  elegiblefebril_FUO=="Si" &
+  Period=="During COVID - <15 years") |> 
+  count(elegiblefebril_FUO, enfermedadaun, buscoayuda)
+```
+
 
 # BEFORE COVID
 
-# 4. Proportions
+# 5. Proportions
 
 ## + Pneumonia
 
@@ -586,7 +676,7 @@ PTam %>%
 
 
 
-# 5. Ratios
+# 6. Ratios
 
 
 ## Declare survey
@@ -1118,7 +1208,7 @@ writexl::write_xlsx(ILI, "output/Diarhea_Ratios_BeforeCOVID_AllAges.xlsx")
 
 ## BEFORE & AFTER
 
-# 6. Proportions
+# 7. Proportions
 
 ## + Pneumonia
 
@@ -1247,7 +1337,7 @@ export2xls(dt, file= "output/Diarrhea_Reasons_BeforeDuringCOVID_Children_ByPerio
 
 
 
-# 7. Ratios
+# 8. Ratios
 
 
 ## Declare survey
