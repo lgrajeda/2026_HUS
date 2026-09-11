@@ -63,11 +63,22 @@ PTam$buscoayuda <- as.numeric(PTam$buscoayuda)
 PTam$buscoayuda_des <- factor(PTam$buscoayuda, levels = c(1,0), labels = c("Si", "No"))
 attr(PTam$buscoayuda_des, "label")<- "Sought care"
 
+
 # For pneumonia
 PTam$neumopaayuda <- as.numeric(PTam$neumopaayuda)
 PTam$neumopaayuda_des <- factor(PTam$neumopaayuda, levels = c(1,0), labels = c("Si", "No"))
 attr(PTam$neumopaayuda_des, "label")<- "Sought care"
 ```
+
+Did not seek healthcare
+```{r}
+PTam <- PTam |> 
+  mutate(NoBuscoAyuda = ifelse(enfermedadaun==0 & buscoayuda==0,1,0),
+         NoBuscoAyudaPenumo = ifelse(enfermedadaun==0 & neumopaayuda==0,1,0))
+```
+
+
+
 
 
 ## + Places of healthcare seeking
@@ -87,6 +98,19 @@ PTam$PublicoPneumo_des <- factor(PTam$PublicoPneumo, levels = c(1,0), labels = c
 attr(PTam$PublicoPneumo_des, "label")<- "Public facility (clinic or hospital)"
 
 ```
+
+
+Private place
+```{r}
+PTam <- PTam |> 
+  mutate(Privado = ifelse(FarmaciaTienda==1 | Tradicional==1 |
+                            HospitalPrivado==1 | HospitalPublico==1,1,0),
+         PrivadoPneumo = ifelse(FarmaciaTiendaPneumo==1 | TradicionalPneumo==1 |
+                                HospitalPrivadoPneumo==1 | ClinicaPrivadaPneumo==1,1,0))
+```
+
+
+
 
 
 Lugar especifico
@@ -705,8 +729,14 @@ ratio1<-c(variable="SoughtHealthCare", age="All ages", estimate=round(ratio$rati
 # check if is the same
 svymean(~neumopaayuda, subset(PTam_S, Period =="Before COVID - All ages" & elegibleneumonia_num==1 & enfermedadaun==0), na.rm = TRUE)
 
+ratio<-svyratio(~NoBuscoAyudaPenumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio1_1<-c(variable="DidNotSoughtHealthCare", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
 ratio<-svyratio(~PublicoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
 ratio2<-c(variable="AnyPublicFacility", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~PrivadoPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
+ratio2_2<-c(variable="AnyPrivateFacility", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
 
 ratio<-svyratio(~FarmaciaTiendaPneumo, ~elegibleneumonia_num, design=subset, na.rm=T)
 ratio3<-c(variable="PharmacyCornerStore", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
@@ -848,7 +878,7 @@ ratio42<-c(variable="Macrolides", age=">=5", estimate=round(ratio$ratio*100), CI
 
 
 ```{r}
-Pneumo <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
+Pneumo_before <- bind_rows(ratio1, ratio1_1, ratio2, ratio2_2, ratio3, ratio4, ratio5, ratio6,
                     ratio7, ratio8, ratio9, ratio10, ratio11, ratio12,
                     ratio13, ratio14, ratio15, ratio16, ratio17, ratio18,
                     ratio19, ratio20, ratio21, ratio22, ratio23, ratio24,
@@ -858,8 +888,8 @@ Pneumo <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
                     ratio42) |> 
   dplyr::rename("CI_Low"=CI1, "CI_High"=CI2)
 
-Pneumo
-writexl::write_xlsx(Pneumo, "output/Pneumonia_Ratios_BeforeCOVID_AllAges.xlsx")
+Pneumo_before
+writexl::write_xlsx(Pneumo_before, "output/Pneumonia_Ratios_BeforeCOVID_AllAges.xlsx")
 ```
 
 ## + ILI
@@ -874,8 +904,15 @@ subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegibleili_num==1
 ratio<-svyratio(~buscoayuda, ~elegibleili_num, design=subset, na.rm=T)
 ratio1<-c(variable="SoughtHealthCare", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
 
+ratio<-svyratio(~NoBuscoAyuda, ~elegibleili_num, design=subset, na.rm=T)
+ratio1_1<-c(variable="DidNotSoughtHealthCare", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+
 ratio<-svyratio(~Publico, ~elegibleili_num, design=subset, na.rm=T)
 ratio2<-c(variable="AnyPublicFacility", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Privado, ~elegibleili_num, design=subset, na.rm=T)
+ratio2_2<-c(variable="AnyPrivateFacility", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
 
 ratio<-svyratio(~FarmaciaTienda, ~elegibleili_num, design=subset, na.rm=T)
 ratio3<-c(variable="PharmacyCornerStore", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
@@ -1020,7 +1057,7 @@ ratio43<-c(variable="Macrolides", age=">=5", estimate=round(ratio$ratio*100), CI
 
 
 ```{r}
-ILI <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
+ILI_before <- bind_rows(ratio1, ratio1_1, ratio2, ratio2_2, ratio3, ratio4, ratio5, ratio6,
                     ratio7, ratio8, ratio9, ratio10, ratio11, ratio12,
                     ratio13, ratio14, ratio15, ratio16, ratio17, ratio18,
                     ratio19, ratio20, ratio21, ratio22, ratio23, ratio24,
@@ -1029,8 +1066,8 @@ ILI <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
                     ratio36, ratio37, ratio38, ratio39, ratio40, ratio41,
                     ratio42, ratio43) |> 
   dplyr::rename("CI_Low"=CI1, "CI_High"=CI2)
-ILI
-writexl::write_xlsx(ILI, "output/ILI_Ratios_BeforeCOVID_AllAges.xlsx")
+ILI_before
+writexl::write_xlsx(ILI_before, "output/ILI_Ratios_BeforeCOVID_AllAges.xlsx")
 ```
 
 
@@ -1048,8 +1085,15 @@ subset <- subset(PTam_S, Period =="Before COVID - All ages" & elegiblediarrea_nu
 ratio<-svyratio(~buscoayuda, ~elegiblediarrea_num, design=subset, na.rm=T)
 ratio1<-c(variable="SoughtHealthCare", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
 
+ratio<-svyratio(~NoBuscoAyuda, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio1_1<-c(variable="DidNotSoughtHealthCare", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+
 ratio<-svyratio(~Publico, ~elegiblediarrea_num, design=subset, na.rm=T)
-ratio2<-c(variable="AnyPublic", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+ratio2<-c(variable="AnyPublicFacility", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
+
+ratio<-svyratio(~Privado, ~elegiblediarrea_num, design=subset, na.rm=T)
+ratio2_2<-c(variable="AnyPrivateFacility", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
 
 ratio<-svyratio(~FarmaciaTienda, ~elegiblediarrea_num, design=subset, na.rm=T)
 ratio3<-c(variable="PharmacyCornerStore", age="All ages", estimate=round(ratio$ratio*100), CI=round(confint(ratio)*100))
@@ -1190,7 +1234,7 @@ ratio42<-c(variable="Macrolides", age=">=5", estimate=round(ratio$ratio*100), CI
 
 
 ```{r}
-Diarhea <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
+Diarhea_before <- bind_rows(ratio1, ratio1_1, ratio2, ratio2_2, ratio3, ratio4, ratio5, ratio6,
                     ratio7, ratio8, ratio9, ratio10, ratio11, ratio12,
                     ratio13, ratio14, ratio15, ratio16, ratio17, ratio18,
                     ratio19, ratio20, ratio21, ratio22, ratio23, ratio24,
@@ -1200,8 +1244,8 @@ Diarhea <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
                     ratio42, ratio43) |> 
   dplyr::rename("CI_Low"=CI1, "CI_High"=CI2)
 
-Diarhea
-writexl::write_xlsx(ILI, "output/Diarhea_Ratios_BeforeCOVID_AllAges.xlsx")
+Diarhea_before
+writexl::write_xlsx(Diarhea_before, "output/Diarhea_Ratios_BeforeCOVID_AllAges.xlsx")
 ```
 
 
@@ -1704,6 +1748,80 @@ Diarrhea <- bind_rows(ratio1, ratio2, ratio3, ratio4, ratio5, ratio6,
 Diarrhea
 writexl::write_xlsx(Diarrhea, "output/Diarrhea_Ratios_BeforeDuringCOVID_Children.xlsx")
 ```
+
+
+
+# 9. Graphical Abstract
+
+```{r}
+A <- Pneumo_before |> 
+  filter(variable %in% c("DidNotSoughtHealthCare", "AnyPublicFacility", "AnyPrivateFacility", "SocialSecurityClinic")) |> 
+  filter(age == "All ages") |> 
+  mutate(Syndrome = "Pneumonia")
+
+
+B <- ILI_before |> 
+  filter(variable %in% c("DidNotSoughtHealthCare", "AnyPublicFacility", "AnyPrivateFacility", "SocialSecurityClinic")) |> 
+  filter(age == "All ages") |> 
+  mutate(Syndrome = "Influenza-Like Illness")
+
+C <- Diarhea_before |> 
+  filter(variable %in% c("DidNotSoughtHealthCare", "AnyPublicFacility", "AnyPrivateFacility", "SocialSecurityClinic")) |> 
+  filter(age == "All ages") |> 
+  mutate(Syndrome = "Diarrhea")
+
+
+Table <- bind_rows(A,B,C) |> 
+  mutate(
+    estimate = as.numeric(estimate),
+    CI_Low = as.numeric(CI_Low),
+    CI_High = as.numeric(CI_High),
+    
+    CI_Low = case_when(
+    CI_Low>=0 ~ CI_Low,
+    CI_Low<0 ~ 0),
+    
+    CI_High = case_when(
+    CI_High<=100 ~ CI_High,
+    CI_High>100 ~ 100),
+    
+    variable = case_when(
+      variable=="DidNotSoughtHealthCare" ~ "Did not seek healthcare",
+      variable=="AnyPrivateFacility" ~ "Private facility",
+      variable=="SocialSecurityClinic" ~ "Social security facility",
+      variable=="AnyPublicFacility" ~ "Public facility"))
+
+
+Table$variable <- factor(Table$variable, 
+                         levels = c("Did not seek healthcare", "Private facility", "Social security facility", "Public facility"),
+                         labels = c("Did not seek healthcare", "Private facility", "Social security facility", "Public facility"))
+
+Table$Syndrome<- factor(Table$Syndrome,
+                        levels = c("Pneumonia", "Influenza-Like Illness", "Diarrhea"),
+                        labels = c("Pneumonia", "Influenza-Like Illness", "Diarrhea"))
+
+Table
+```
+
+
+
+```{r}
+ggplot(Table)+
+  geom_col(aes(x=Syndrome, y=estimate, fill=variable, group=variable), color = "black", position="dodge")+
+  geom_linerange(aes(x=Syndrome, y=estimate, ymin=CI_Low, ymax = CI_High, group=variable), position=position_dodge2(width = 0.9, padding = 0.5)) +
+  scale_fill_manual(values = c("#DADAEB", "#9E9AC8", "#6A51A3", "#4a3872")) +
+  labs(x="Acute infectious syndrome", fill="Healthcare source", y="Healthcare-seeking prevalence (95% CI)") +
+  theme_light()
+```
+
+Healthcare-seeking for acute infectious syndromes, November 2019-March 2020, catchment area of Hospital Regional de Occidente, Guatemala
+
+
+```{r}
+
+```
+
+
 
 
 ## FIN
